@@ -42,7 +42,6 @@
             // Transform data into a nested map structure
             dataByDepartment = data.reduce((departmentMap, item) => {
                 const { Department, Gender, Title, Count } = item;
-
                 if (!departmentMap.has(Department)) {
                     departmentMap.set(Department, { M: [], F: [], all: [] });
                 }
@@ -61,20 +60,47 @@
                 return departmentMap;
             }, new Map());
 
+            // Add an "All Departments" option
+            addAllDepartmentsOption(dataByDepartment);
             // Dynamically create department radio buttons
-            createDepartmentRadios([...dataByDepartment.keys()]);
+			const departmentNames = dataByDepartment.keys().filter((d) => d != "All")
+            createDepartmentRadios([...["All", ...departmentNames]]);
 
             // Initialize the chart with default department and gender
-            const chart = createBarChart(dataByDepartment.get("Customer Service").all);
+            const chart = createBarChart(aggregateAllDepartments(dataByDepartment, "all"));
             document.getElementById("chart").appendChild(chart);
         });
+
+        function addAllDepartmentsOption(departmentMap) {
+            // Create the "All Departments" aggregated data
+            const allDepartments = {all: [], M: [], F: [],  };
+
+            departmentMap.forEach(departmentData => {
+                ["M", "F", "all"].forEach(gender => {
+                    departmentData[gender].forEach(item => {
+                        const existing = allDepartments[gender].find(d => d.letter === item.letter);
+                        if (existing) {
+                            existing.frequency += item.frequency;
+                        } else {
+                            allDepartments[gender].push({ ...item });
+                        }
+                    });
+                });
+            });
+
+            departmentMap.set("All", allDepartments);
+        }
+
+        function aggregateAllDepartments(departmentMap, gender) {
+            return departmentMap.get("All")[gender];
+        }
 
         function createDepartmentRadios(departments) {
             const container = document.getElementById('department-selection');
             departments.forEach(department => {
                 const label = document.createElement('label');
                 label.innerHTML = `
-                    <input type="radio" name="department" value="${department}" ${department === "Customer Service" ? 'checked' : ''}>
+                    <input type="radio" name="department" value="${department}" ${department === "All" ? 'checked' : ''}>
                     ${department}
                 `;
                 container.appendChild(label);
@@ -106,57 +132,70 @@
         }
 
         function createBarChart(data) {
-            // Bar chart dimensions and margins
-            const width = 640;
-            const height = 400;
-            const marginTop = 20;
-            const marginRight = 0;
-            const marginBottom = 30;
-            const marginLeft = 40;
+			// Bar chart dimensions and margins
+			const width = 640;
+			const height = 400;
+			const marginTop = 20;
+			const marginRight = 0;
+			const marginBottom = 30;
+			const marginLeft = 40;
 
-            // x and y scales
-            const x = d3.scaleBand()
-                .domain(data.map(d => d.letter))
-                .range([marginLeft, width - marginRight])
-                .padding(0.1);
+			// x and y scales
+			const x = d3.scaleBand()
+				.domain(data.map(d => d.letter))
+				.range([marginLeft, width - marginRight])
+				.padding(0.1);
 
-            const y = d3.scaleLinear()
-                .domain([0, d3.max(data, d => d.frequency)]).nice()
-                .range([height - marginBottom, marginTop]);
+			const y = d3.scaleLinear()
+				.domain([0, d3.max(data, d => d.frequency)]).nice()
+				.range([height - marginBottom, marginTop]);
 
-            // x and y axes
-            const xAxis = d3.axisBottom(x).tickSizeOuter(0);
-            const yAxis = d3.axisLeft(y).tickFormat((y) => y.toFixed());
+			// x and y axes
+			const xAxis = d3.axisBottom(x).tickSizeOuter(0);
+			const yAxis = d3.axisLeft(y).tickFormat((y) => y.toFixed());
 
-            // Create SVG container
-            const svg = d3.create("svg")
-                .attr("viewBox", [0, 0, width, height])
-                .attr("style", `max-width: ${width}px; height: auto; font: 10px sans-serif; overflow: visible;`);
+			// Create SVG container
+			const svg = d3.create("svg")
+				.attr("viewBox", [0, 0, width, height])
+				.attr("style", `max-width: ${width}px; height: auto; font: 10px sans-serif; overflow: visible;`);
 
-            // Add bars
-            svg.append("g")
-                .attr("fill", "steelblue")
-                .selectAll("rect")
-                .data(data)
-                .join("rect")
-                .attr("x", d => x(d.letter))
-                .attr("y", d => y(d.frequency))
-                .attr("height", d => y(0) - y(d.frequency))
-                .attr("width", x.bandwidth());
+			// Add bars
+			const bars = svg.append("g")
+				.attr("fill", "steelblue")
+				.selectAll("rect")
+				.data(data)
+				.join("rect")
+				.attr("x", d => x(d.letter))
+				.attr("y", d => y(d.frequency))
+				.attr("height", d => y(0) - y(d.frequency))
+				.attr("width", x.bandwidth());
 
-            // Add x axis
-            svg.append("g")
-                .attr("transform", `translate(0,${height - marginBottom})`)
-                .call(xAxis);
+			// Add text labels above bars
+			svg.append("g")
+				.selectAll("text")
+				.data(data)
+				.join("text")
+				.attr("x", d => x(d.letter) + x.bandwidth() / 2)
+				.attr("y", d => y(d.frequency) - 5) // Position above the bar
+				.attr("text-anchor", "middle") // Center text horizontally
+				.attr("font-size", "10px")
+				.attr("fill", "black")
+				.text(d => d.frequency); // Display the frequency value
 
-            // Add y axis
-            svg.append("g")
-                .attr("transform", `translate(${marginLeft},0)`)
-                .call(yAxis)
-                .call(g => g.select(".domain").remove());
+			// Add x axis
+			svg.append("g")
+				.attr("transform", `translate(0,${height - marginBottom})`)
+				.call(xAxis);
 
-            return svg.node();
-        }
+			// Add y axis
+			svg.append("g")
+				.attr("transform", `translate(${marginLeft},0)`)
+				.call(yAxis)
+				.call(g => g.select(".domain").remove());
+
+			return svg.node();
+		}
+
     </script>
 </body>
 </html>
