@@ -8,19 +8,16 @@
 </head>
 <body>
     <h1>Department Employee Distribution</h1>
-    <div>
-        <label>
-            <input type="radio" name="department" value="Customer Service" checked>
-            Customer Service
-        </label>
-        <label>
-            <input type="radio" name="department" value="Development">
-            Development
-        </label>
+    <div id="department-selection">
+        <!-- Department radios will be dynamically added here -->
     </div>
     <div>
         <label>
-            <input type="radio" name="gender" value="M" checked>
+            <input type="radio" name="gender" value="all" checked>
+            All
+        </label>
+        <label>
+            <input type="radio" name="gender" value="M">
             Male
         </label>
         <label>
@@ -47,24 +44,66 @@
                 const { Department, Gender, Title, Count } = item;
 
                 if (!departmentMap.has(Department)) {
-                    departmentMap.set(Department, new Map());
+                    departmentMap.set(Department, { M: [], F: [], all: [] });
                 }
 
-                const genderMap = departmentMap.get(Department);
+                // Add counts by gender
+                departmentMap.get(Department)[Gender].push({ letter: Title, frequency: Count });
 
-                if (!genderMap.has(Gender)) {
-                    genderMap.set(Gender, []);
+                // Aggregate counts for "all" genders
+                const existingAll = departmentMap.get(Department).all.find(d => d.letter === Title);
+                if (existingAll) {
+                    existingAll.frequency += Count;
+                } else {
+                    departmentMap.get(Department).all.push({ letter: Title, frequency: Count });
                 }
-
-                genderMap.get(Gender).push({ letter: Title, frequency: Count });
 
                 return departmentMap;
             }, new Map());
 
-            // Initialize the chart with the default department and gender
-            const chart = createBarChart(dataByDepartment.get("Customer Service").get("M"));
+            // Dynamically create department radio buttons
+            createDepartmentRadios([...dataByDepartment.keys()]);
+
+            // Initialize the chart with default department and gender
+            const chart = createBarChart(dataByDepartment.get("Customer Service").all);
             document.getElementById("chart").appendChild(chart);
         });
+
+        function createDepartmentRadios(departments) {
+            const container = document.getElementById('department-selection');
+            departments.forEach(department => {
+                const label = document.createElement('label');
+                label.innerHTML = `
+                    <input type="radio" name="department" value="${department}" ${department === "Customer Service" ? 'checked' : ''}>
+                    ${department}
+                `;
+                container.appendChild(label);
+            });
+
+            // Add event listener for department changes
+            document.querySelectorAll('input[name="department"]').forEach(radio => {
+                radio.addEventListener("change", updateChartBasedOnSelection);
+            });
+
+            // Add event listener for gender changes
+            document.querySelectorAll('input[name="gender"]').forEach(radio => {
+                radio.addEventListener("change", updateChartBasedOnSelection);
+            });
+        }
+
+        function updateChartBasedOnSelection() {
+            const selectedDepartment = document.querySelector('input[name="department"]:checked').value;
+            const selectedGender = document.querySelector('input[name="gender"]:checked').value;
+
+            if (dataByDepartment.has(selectedDepartment)) {
+                const genderData = dataByDepartment.get(selectedDepartment)[selectedGender];
+
+                // Clear the previous chart and render a new one
+                const chartContainer = document.getElementById("chart");
+                chartContainer.innerHTML = "";
+                chartContainer.appendChild(createBarChart(genderData));
+            }
+        }
 
         function createBarChart(data) {
             // Bar chart dimensions and margins
@@ -118,23 +157,6 @@
 
             return svg.node();
         }
-
-        // Event listeners for radio buttons
-        document.querySelectorAll('input[name="department"], input[name="gender"]').forEach(radio => {
-            radio.addEventListener("change", () => {
-                const selectedDepartment = document.querySelector('input[name="department"]:checked').value;
-                const selectedGender = document.querySelector('input[name="gender"]:checked').value;
-
-                if (dataByDepartment.has(selectedDepartment)) {
-                    const genderData = dataByDepartment.get(selectedDepartment).get(selectedGender);
-
-                    // Clear the previous chart and render a new one
-                    const chartContainer = document.getElementById("chart");
-                    chartContainer.innerHTML = "";
-                    chartContainer.appendChild(createBarChart(genderData));
-                }
-            });
-        });
     </script>
 </body>
 </html>

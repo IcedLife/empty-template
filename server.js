@@ -53,8 +53,6 @@ app.get('/api/departments', (req, res) => {
 			departments d ON de.dept_no = d.dept_no
 		JOIN 
 			titles t ON e.emp_no = t.emp_no
-		WHERE 
-			d.dept_name = 'Customer Service' OR d.dept_name = 'Development'
 		GROUP BY 
 			d.dept_name, t.title, e.gender
 		ORDER BY 
