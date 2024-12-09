@@ -1,11 +1,12 @@
-# Empty app template with Node.js server
+This is a demo project and uses node js to demostrate d3.js library
 
+Dependency Required:
+1.npm and node installed
+2.mysql installed locally
 
-To use this template follow these steps:
+Load mysql data:
+1. goto ./databasedump
+2. run ./mysql < databasedump
 
-1. Clone the repo: `git clone https://github.com/UnitedAgency/empty-template.git`
-2. Navigate to directory: `cd empty-template`
-3. Install dependencies: `npm install`
-4. Run server: `node server.js`
-
-All application files goes into `app/` directory.
+Start Webserver
+1. node server.js
