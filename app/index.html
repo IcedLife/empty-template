@@ -1,14 +1,140 @@
 <!DOCTYPE html>
-<meta charset="utf-8">
-<title>Pie chart update</title>
-<link rel="stylesheet" type="text/css" href="./css/main.css">
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Bar Chart</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
 <body>
-<script type="module">
+    <h1>Department Employee Distribution</h1>
+    <div>
+        <label>
+            <input type="radio" name="department" value="Customer Service" checked>
+            Customer Service
+        </label>
+        <label>
+            <input type="radio" name="department" value="Development">
+            Development
+        </label>
+    </div>
+    <div>
+        <label>
+            <input type="radio" name="gender" value="M" checked>
+            Male
+        </label>
+        <label>
+            <input type="radio" name="gender" value="F">
+            Female
+        </label>
+    </div>
+    <div id="chart"></div>
 
-import define from "./js/main.js";
-import {Runtime, Library, Inspector} from "./js/runtime.js";
+    <script>
+        async function getData() {
+            const response = await fetch('http://localhost:3000/api/departments');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return await response.json(); // Return the data as JSON
+        }
 
-const runtime = new Runtime();
-const main = runtime.module(define, Inspector.into(document.body));
+        let dataByDepartment;
 
-</script>
+        getData().then(data => {
+            // Transform data into a nested map structure
+            dataByDepartment = data.reduce((departmentMap, item) => {
+                const { Department, Gender, Title, Count } = item;
+
+                if (!departmentMap.has(Department)) {
+                    departmentMap.set(Department, new Map());
+                }
+
+                const genderMap = departmentMap.get(Department);
+
+                if (!genderMap.has(Gender)) {
+                    genderMap.set(Gender, []);
+                }
+
+                genderMap.get(Gender).push({ letter: Title, frequency: Count });
+
+                return departmentMap;
+            }, new Map());
+
+            // Initialize the chart with the default department and gender
+            const chart = createBarChart(dataByDepartment.get("Customer Service").get("M"));
+            document.getElementById("chart").appendChild(chart);
+        });
+
+        function createBarChart(data) {
+            // Bar chart dimensions and margins
+            const width = 640;
+            const height = 400;
+            const marginTop = 20;
+            const marginRight = 0;
+            const marginBottom = 30;
+            const marginLeft = 40;
+
+            // x and y scales
+            const x = d3.scaleBand()
+                .domain(data.map(d => d.letter))
+                .range([marginLeft, width - marginRight])
+                .padding(0.1);
+
+            const y = d3.scaleLinear()
+                .domain([0, d3.max(data, d => d.frequency)]).nice()
+                .range([height - marginBottom, marginTop]);
+
+            // x and y axes
+            const xAxis = d3.axisBottom(x).tickSizeOuter(0);
+            const yAxis = d3.axisLeft(y).tickFormat((y) => y.toFixed());
+
+            // Create SVG container
+            const svg = d3.create("svg")
+                .attr("viewBox", [0, 0, width, height])
+                .attr("style", `max-width: ${width}px; height: auto; font: 10px sans-serif; overflow: visible;`);
+
+            // Add bars
+            svg.append("g")
+                .attr("fill", "steelblue")
+                .selectAll("rect")
+                .data(data)
+                .join("rect")
+                .attr("x", d => x(d.letter))
+                .attr("y", d => y(d.frequency))
+                .attr("height", d => y(0) - y(d.frequency))
+                .attr("width", x.bandwidth());
+
+            // Add x axis
+            svg.append("g")
+                .attr("transform", `translate(0,${height - marginBottom})`)
+                .call(xAxis);
+
+            // Add y axis
+            svg.append("g")
+                .attr("transform", `translate(${marginLeft},0)`)
+                .call(yAxis)
+                .call(g => g.select(".domain").remove());
+
+            return svg.node();
+        }
+
+        // Event listeners for radio buttons
+        document.querySelectorAll('input[name="department"], input[name="gender"]').forEach(radio => {
+            radio.addEventListener("change", () => {
+                const selectedDepartment = document.querySelector('input[name="department"]:checked').value;
+                const selectedGender = document.querySelector('input[name="gender"]:checked').value;
+
+                if (dataByDepartment.has(selectedDepartment)) {
+                    const genderData = dataByDepartment.get(selectedDepartment).get(selectedGender);
+
+                    // Clear the previous chart and render a new one
+                    const chartContainer = document.getElementById("chart");
+                    chartContainer.innerHTML = "";
+                    chartContainer.appendChild(createBarChart(genderData));
+                }
+            });
+        });
+    </script>
+</body>
+</html>
