@@ -100,8 +100,8 @@
             departments.forEach(department => {
                 const label = document.createElement('label');
                 label.innerHTML = `
-                    <input type="radio" name="department" value="${convertToGerman(department)}" ${department === "All" ? 'checked' : ''}>
-                    ${department}
+                    <input type="radio" name="department" value="${department}" ${department === "All" ? 'checked' : ''}>
+                    ${convertToGerman(department)}
                 `;
                 container.appendChild(label);
             });
@@ -156,7 +156,35 @@
             }
         }
 
+        function convertLetterToGerman(letter) {
+            switch (letter) {
+                case "Assistant Engineer":
+                    return "Hilfsingenieur";
+                case "Engineer":
+                    return "Ingenieur";
+                case "Manager":
+                    return "Manager";
+                case "Senior Engineer":
+                    return "Senior-Ingenieur";
+                case "Senior Staff":
+                    return "Senior-Mitarbeiter";
+                case "Staff":
+                    return "Mitarbeiter";
+                case "Technique Leader":
+                    return "Technikleiter";
+                default:
+                    return letter; // Fallback to original name if no match
+            }
+        }
+
+
+
         function createBarChart(data) {
+            // Map over the data array and transform the letter property
+            const updatedData = data.map(item => ({
+                ...item,
+                letter: convertLetterToGerman(item.letter)
+            }));
 			// Bar chart dimensions and margins
 			const width = 640;
 			const height = 400;
@@ -167,12 +195,12 @@
 
 			// x and y scales
 			const x = d3.scaleBand()
-				.domain(data.map(d => d.letter))
+				.domain(updatedData.map(d => d.letter))
 				.range([marginLeft, width - marginRight])
 				.padding(0.1);
 
 			const y = d3.scaleLinear()
-				.domain([0, d3.max(data, d => d.frequency)]).nice()
+				.domain([0, d3.max(updatedData, d => d.frequency)]).nice()
 				.range([height - marginBottom, marginTop]);
 
 			// x and y axes
@@ -188,7 +216,7 @@
 			const bars = svg.append("g")
 				.attr("fill", "steelblue")
 				.selectAll("rect")
-				.data(data)
+				.data(updatedData)
 				.join("rect")
 				.attr("x", d => x(d.letter))
 				.attr("y", d => y(d.frequency))
@@ -198,7 +226,7 @@
 			// Add text labels above bars
 			svg.append("g")
 				.selectAll("text")
-				.data(data)
+				.data(updatedData)
 				.join("text")
 				.attr("x", d => x(d.letter) + x.bandwidth() / 2)
 				.attr("y", d => y(d.frequency) - 5) // Position above the bar
