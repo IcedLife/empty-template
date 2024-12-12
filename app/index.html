@@ -100,7 +100,7 @@
             departments.forEach(department => {
                 const label = document.createElement('label');
                 label.innerHTML = `
-                    <input type="radio" name="department" value="${department}" ${department === "All" ? 'checked' : ''}>
+                    <input type="radio" name="department" value="${convertToGerman(department)}" ${department === "All" ? 'checked' : ''}>
                     ${department}
                 `;
                 container.appendChild(label);
@@ -128,6 +128,31 @@
                 const chartContainer = document.getElementById("chart");
                 chartContainer.innerHTML = "";
                 chartContainer.appendChild(createBarChart(genderData));
+            }
+        }
+
+        function convertToGerman(department) {
+            switch (department) {
+                case "Customer Service":
+                    return "Kundendienst";
+                case "Development":
+                    return "Entwicklung";
+                case "Finance":
+                    return "Finanzen";
+                case "Human Resources":
+                    return "Personalwesen";
+                case "Marketing":
+                    return "Marketing";
+                case "Production":
+                    return "Produktion";
+                case "Quality Management":
+                    return "Qualitätsmanagement";
+                case "Research":
+                    return "Forschung";
+                case "Sales":
+                    return "Vertrieb";
+                default:
+                    return department; // Fallback to original name if no match
             }
         }
 
